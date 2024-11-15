@@ -19,15 +19,65 @@ Certifique-se de que você tem:
   pip install pandas
   ```
 - Uma aplicação criada no [Mercado Livre Developer Center](https://developers.mercadolivre.com.br/pt_br/api-docs-pt-br) para obter:
-  - `Client ID`
-  - `Client Secret`
-  - `Refresh Token` e `Access Token` gerados.
+  - **Client ID**
+  - **Client Secret**
+  - **Access Token** e **Refresh Token**.
+
+---
+
+## Como Obter o Access Token e o Refresh Token
+
+Para gerar o `access_token` e o `refresh_token`, siga os passos abaixo:
+
+1. **Obtenha o código de autorização:**
+   Gere o link de autorização substituindo os valores abaixo:
+   ```
+   https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=SEU_CLIENT_ID&redirect_uri=SEU_REDIRECT_URI
+   ```
+   - Substitua `SEU_CLIENT_ID` pelo seu Client ID.
+   - Substitua `SEU_REDIRECT_URI` pelo Redirect URI configurado na sua aplicação.
+
+   Acesse este link no navegador. Após autorizar a aplicação, você será redirecionado para o `redirect_uri` com um parâmetro `code` na URL, como no exemplo:
+   ```
+   https://seu_callback_url.com?code=SEU_AUTHORIZATION_CODE
+   ```
+
+2. **Troque o código de autorização pelo token de acesso:**
+   Use o código retornado (`SEU_AUTHORIZATION_CODE`) para obter o `access_token` e o `refresh_token` com o seguinte script:
+
+   ```python
+   import requests
+
+   client_id = "SEU_CLIENT_ID"
+   client_secret = "SEU_CLIENT_SECRET"
+   redirect_uri = "SEU_REDIRECT_URI"
+   authorization_code = "SEU_AUTHORIZATION_CODE"
+
+   url = "https://api.mercadolibre.com/oauth/token"
+   payload = {
+       "grant_type": "authorization_code",
+       "client_id": client_id,
+       "client_secret": client_secret,
+       "redirect_uri": redirect_uri,
+       "code": authorization_code
+   }
+   response = requests.post(url, data=payload)
+
+   if response.status_code == 200:
+       tokens = response.json()
+       print("Access Token:", tokens["access_token"])
+       print("Refresh Token:", tokens["refresh_token"])
+   else:
+       print("Erro:", response.json())
+   ```
+
+3. Salve os valores de `access_token` e `refresh_token` retornados.
 
 ---
 
 ## Configuração
 
-Substitua as seguintes variáveis no script pelos valores reais da sua aplicação:
+Substitua as seguintes variáveis no script principal pelos valores reais da sua aplicação:
 
 - **`SEU_CLIENT_ID`**: O ID da sua aplicação no Mercado Livre.
 - **`SEU_CLIENT_SECRET`**: O segredo da sua aplicação.
@@ -115,13 +165,6 @@ buscar_mais_vendidos(access_token, refresh_token)
 
 ---
 
-## Notas Importantes
-
-- O **`file_name`** deve ser configurado para um diretório válido no seu sistema.
-- O script verifica automaticamente se o `access_token` expirou e renova-o utilizando o `refresh_token`.
-
----
-
 ## Resultados
 
 O script salvará um arquivo CSV com as informações dos produtos mais vendidos, incluindo:
@@ -130,8 +173,6 @@ O script salvará um arquivo CSV com as informações dos produtos mais vendidos
 - Preço
 - Quantidade de vendas
 - Outros detalhes relevantes.
-
-
 
 ---
 
