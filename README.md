@@ -75,91 +75,68 @@ Para gerar o `access_token` e o `refresh_token`, siga os passos abaixo:
 
 ---
 
-## Configuração
+## Explicação das Funções no Script
 
-Substitua as seguintes variáveis no script principal pelos valores reais da sua aplicação:
+### 1. `renovar_token(refresh_token)`
 
-- **`SEU_CLIENT_ID`**: O ID da sua aplicação no Mercado Livre.
-- **`SEU_CLIENT_SECRET`**: O segredo da sua aplicação.
-- **`SEU_ACCESS_TOKEN`**: O token de acesso inicial.
-- **`SEU_REFRESH_TOKEN`**: O token de renovação inicial.
+**Descrição**: Renova o token de acesso (`access_token`) usando o `refresh_token`.
+
+- **Entrada**: 
+  - `refresh_token`: Token usado para obter um novo token de acesso.
+
+- **Processo**:
+  1. Faz uma requisição POST para o endpoint de autenticação da API do Mercado Livre.
+  2. Envia os parâmetros necessários: `grant_type`, `client_id`, `client_secret` e `refresh_token`.
+  3. Retorna o novo `access_token` e `refresh_token` se a requisição for bem-sucedida.
+
+- **Saída**: 
+  - Um novo `access_token` e um `refresh_token`, ou `None` se ocorrer um erro.
 
 ---
 
-## Uso
+### 2. `buscar_mais_vendidos(access_token, refresh_token)`
+
+**Descrição**: Obtém os produtos mais vendidos de uma categoria específica.
+
+- **Entrada**: 
+  - `access_token`: Token de acesso válido para autorização na API.
+  - `refresh_token`: Usado para renovar o token de acesso caso esteja expirado.
+
+- **Processo**:
+  1. Envia uma requisição GET para o endpoint de busca de produtos (`/sites/MLB/search`) com o `access_token` no cabeçalho.
+  2. Caso o token de acesso esteja expirado, chama a função `renovar_token` para obter um novo token.
+  3. Exibe os produtos mais vendidos no console em formato JSON indentado.
+  4. Chama a função `salvar_mais_vendidos_csv` para salvar os resultados em um arquivo CSV.
+
+- **Saída**: 
+  - Produtos mais vendidos exibidos no console.
+  - Resultados salvos em um arquivo CSV.
+
+---
+
+### 3. `salvar_mais_vendidos_csv(mais_vendidos, file_name)`
+
+**Descrição**: Salva os produtos mais vendidos em um arquivo CSV.
+
+- **Entrada**: 
+  - `mais_vendidos`: Dados dos produtos mais vendidos em formato JSON.
+  - `file_name`: Caminho do arquivo CSV onde os dados serão salvos.
+
+- **Processo**:
+  1. Extrai os dados relevantes dos produtos usando `pandas.json_normalize`.
+  2. Salva os dados em um arquivo CSV no local especificado com o delimitador `;`.
+
+- **Saída**: 
+  - Um arquivo CSV contendo as informações dos produtos mais vendidos.
+
+---
+
+## Exemplo de Uso
 
 Copie o código abaixo para um arquivo Python e execute-o.
 
 ```python
-import requests
-import json
-import pandas as pd
-
-# Configurações
-categoria_id = 'MLB1144'  # Eletrodomésticos
-access_token = 'SEU_ACCESS_TOKEN'
-refresh_token = 'SEU_REFRESH_TOKEN'
-
-# Função para renovar o access token usando o refresh token
-def renovar_token(refresh_token):
-    url = 'https://api.mercadolibre.com/oauth/token'
-    dados = {
-        'grant_type': 'refresh_token',
-        'client_id': 'SEU_CLIENT_ID',
-        'client_secret': 'SEU_CLIENT_SECRET',
-        'refresh_token': refresh_token
-    }
-    resposta = requests.post(url, data=dados)
-    print("Status Code:", resposta.status_code)
-    print("Response Body:", resposta.text)
-    if resposta.status_code == 200:
-        novo_token = resposta.json()
-        return novo_token['access_token'], novo_token['refresh_token']
-    else:
-        print(f"Erro ao renovar token: {resposta.status_code}, {resposta.text}")
-        return None, None
-
-# Função para buscar produtos mais vendidos
-def buscar_mais_vendidos(access_token, refresh_token):
-    headers = {
-        'Authorization': f'Bearer {access_token}'
-    }
-    produtos_url = f'https://api.mercadolibre.com/sites/MLB/search?category={categoria_id}&sort=sold_quantity&limit=50'
-    top_produtos = requests.get(produtos_url, headers=headers)
-
-    # Verifica se o access token expirou
-    if top_produtos.status_code == 401:
-        print("Token expirado, tentando renovar...")
-        access_token, refresh_token = renovar_token(refresh_token)
-        if access_token:
-            headers = {
-                'Authorization': f'Bearer {access_token}'
-            }
-            top_produtos = requests.get(produtos_url, headers=headers)
-        else:
-            print("Falha ao renovar o token.")
-            return
-
-    if top_produtos.status_code == 200:
-        mais_vendidos = top_produtos.json()
-        print("Top produtos mais vendidos:",
-              json.dumps(mais_vendidos['results'], indent=4))
-
-        # Salvar os produtos mais vendidos em formato CSV
-        salvar_mais_vendidos_csv(mais_vendidos)
-    else:
-        print(f"Erro ao buscar os produtos mais vendidos: {top_produtos.status_code}, {top_produtos.text}")
-
-# Função para salvar os produtos mais vendidos em formato CSV
-def salvar_mais_vendidos_csv(mais_vendidos, file_name=r'C:\caminho_para_salvar\vendidos.csv'):
-    # Convertendo os dados relevantes em um DataFrame
-    produtos = mais_vendidos['results']
-    df = pd.json_normalize(produtos)  # Normaliza o JSON para transformar em DataFrame
-    # Salvando o CSV com delimitador ;
-    df.to_csv(file_name, index=False, sep=';')
-    print(f"Dados dos produtos mais vendidos salvos como {file_name} com delimitador ';'.")
-
-# Exemplo de uso
+# Exemplo de uso das funções
 buscar_mais_vendidos(access_token, refresh_token)
 ```
 
